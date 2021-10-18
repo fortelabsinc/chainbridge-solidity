@@ -180,7 +180,8 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
             mintERC721(tokenAddress, address(recipientAddress), tokenID, metaData);
         } else if (_lockMintUnlockList[tokenAddress]) {
             IERC721 erc721 = IERC721(tokenAddress);
-            if (erc721.balanceOf(address(this)) <= 0 && !erc721.exists(tokenID)) {
+            // If the token hasn't been locked on this contract, mint it
+            if (erc721.balanceOf(address(this)) <= 0) {
                 mintERC721(tokenAddress, address(recipientAddress), tokenID, metaData);
             } else {
                 releaseERC721(tokenAddress, address(this), address(recipientAddress), tokenID);
