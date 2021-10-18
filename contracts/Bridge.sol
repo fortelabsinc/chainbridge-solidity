@@ -257,7 +257,7 @@ contract Bridge is Pausable, AccessControl, SafeMath {
      */
     function adminSetLockMintUnlockable(address handlerAddress, address tokenAddress) external onlyAdmin {
         IERCHandler handler = IERCHandler(handlerAddress);
-        handler.setLockMintUnlockable(handlerAddress);
+        handler.setLockMintUnlockable(tokenAddress);
     }
 
     /**
