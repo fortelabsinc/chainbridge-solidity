@@ -6,6 +6,7 @@ import "./HandlerHelpers.sol";
 import "../ERC721Safe.sol";
 import "@openzeppelin/contracts/introspection/ERC165Checker.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 
 /**
@@ -47,7 +48,8 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
         address bridgeAddress,
         bytes32[] memory initialResourceIDs,
         address[] memory initialContractAddresses,
-        address[] memory burnableContractAddresses
+        address[] memory burnableContractAddresses,
+        address[] memory lockMintUnlockableContractAddresses
     ) public {
         require(initialResourceIDs.length == initialContractAddresses.length,
             "initialResourceIDs and initialContractAddresses len mismatch");
@@ -60,6 +62,10 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
 
         for (uint256 i = 0; i < burnableContractAddresses.length; i++) {
             _setBurnable(burnableContractAddresses[i]);
+        }
+
+        for (uint256 i = 0; i < lockMintUnlockableContractAddresses.length; i++) {
+            _setLockMintUnlockable(lockMintUnlockableContractAddresses[i]);
         }
     }
 
@@ -172,6 +178,14 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
 
         if (_burnList[tokenAddress]) {
             mintERC721(tokenAddress, address(recipientAddress), tokenID, metaData);
+        } else if (_lockMintUnlockList[tokenAddress]) {
+            IERC721 erc721 = IERC721(tokenAddress);
+            // If the token hasn't been locked on this contract, mint it
+            if (erc721.balanceOf(address(this)) <= 0) {
+                mintERC721(tokenAddress, address(recipientAddress), tokenID, metaData);
+            } else {
+                releaseERC721(tokenAddress, address(this), address(recipientAddress), tokenID);
+            }
         } else {
             releaseERC721(tokenAddress, address(this), address(recipientAddress), tokenID);
         }

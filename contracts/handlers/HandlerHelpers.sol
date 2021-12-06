@@ -22,6 +22,9 @@ contract HandlerHelpers is IERCHandler {
     // token contract address => is burnable
     mapping (address => bool) public _burnList;
 
+    // token contract address => is lockMintUnlockable
+    mapping (address => bool) public _lockMintUnlockList;
+
     modifier onlyBridge() {
         _onlyBridge();
         _;
@@ -64,6 +67,7 @@ contract HandlerHelpers is IERCHandler {
         _setLockMintUnlockable(contractAddress);
     }
 
+
     /**
         @notice Used to manually release funds from ERC safes.
         @param tokenAddress Address of token contract to release.
@@ -81,6 +85,13 @@ contract HandlerHelpers is IERCHandler {
 
     function _setBurnable(address contractAddress) internal {
         require(_contractWhitelist[contractAddress], "provided contract is not whitelisted");
+        require(!_lockMintUnlockList[contractAddress], "provided contract cannot be lockMintUnlockable and burnable");
         _burnList[contractAddress] = true;
+    }
+
+    function _setLockMintUnlockable(address contractAddress) internal {
+        require(_contractWhitelist[contractAddress], "provided contract is not whitelisted");
+        require(!_burnList[contractAddress], "provided contract cannot be burnable and lockMintUnlockable");
+        _lockMintUnlockList[contractAddress] = true;
     }
 }
