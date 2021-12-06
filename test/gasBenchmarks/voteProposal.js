@@ -11,7 +11,7 @@ const ERC20HandlerContract = artifacts.require("ERC20Handler");
 const ERC20MintableContract = artifacts.require("ERC20PresetMinterPauser");
 
 contract('Gas Benchmark - [Vote Proposal]', async (accounts) => {
-    const domainID = 1;
+    const chainID = 1;
     const relayerThreshold = 2;
     const relayer1Address = accounts[0];
     const relayer2Address = accounts[1]
@@ -30,17 +30,21 @@ contract('Gas Benchmark - [Vote Proposal]', async (accounts) => {
 
     let erc20ResourceID;
 
-    const vote = (resourceID, depositNonce, depositData, relayer) => BridgeInstance.voteProposal(domainID, depositNonce, resourceID, depositData, { from: relayer });
+    const vote = (resourceID, depositNonce, depositDataHash, relayer) => BridgeInstance.voteProposal(chainID, depositNonce, resourceID, depositDataHash, { from: relayer });
 
     before(async () => {
         await Promise.all([
-            BridgeContract.new(domainID, initialRelayers, relayerThreshold, 0, 100).then(instance => BridgeInstance = instance),
+            BridgeContract.new(chainID, initialRelayers, relayerThreshold, 0, 100).then(instance => BridgeInstance = instance),
             ERC20MintableContract.new("token", "TOK").then(instance => ERC20MintableInstance = instance),
         ]);
 
-        erc20ResourceID = Helpers.createResourceID(ERC20MintableInstance.address, domainID);
+        erc20ResourceID = Helpers.createResourceID(ERC20MintableInstance.address, chainID);
 
-        await ERC20HandlerContract.new(BridgeInstance.address).then(instance => ERC20HandlerInstance = instance);
+        const erc20InitialResourceIDs = [erc20ResourceID];
+        const erc20InitialContractAddresses = [ERC20MintableInstance.address];
+        const erc20BurnableContractAddresses = [];
+
+        await ERC20HandlerContract.new(BridgeInstance.address, erc20InitialResourceIDs, erc20InitialContractAddresses, erc20BurnableContractAddresses).then(instance => ERC20HandlerInstance = instance);
 
         await Promise.all([
             ERC20MintableInstance.approve(ERC20HandlerInstance.address, erc20TokenAmount, { from: depositerAddress }),
@@ -53,8 +57,9 @@ contract('Gas Benchmark - [Vote Proposal]', async (accounts) => {
             erc20TokenAmount,
             lenRecipientAddress,
             recipientAddress);
+        const depositDataHash = Ethers.utils.keccak256(ERC20HandlerInstance.address + depositData.substr(2));
 
-        const voteTx = await vote(erc20ResourceID, depositNonce, depositData, relayer1Address);
+        const voteTx = await vote(erc20ResourceID, depositNonce, depositDataHash, relayer1Address);
 
         gasBenchmarks.push({
             type: 'Vote Proposal - relayerThreshold = 2, Not Finalized',
@@ -67,8 +72,9 @@ contract('Gas Benchmark - [Vote Proposal]', async (accounts) => {
             erc20TokenAmount,
             lenRecipientAddress,
             recipientAddress);
+        const depositDataHash = Ethers.utils.keccak256(ERC20HandlerInstance.address + depositData.substr(2));
 
-        const voteTx = await vote(erc20ResourceID, depositNonce, depositData, relayer2Address);
+        const voteTx = await vote(erc20ResourceID, depositNonce, depositDataHash, relayer2Address);
 
         gasBenchmarks.push({
             type: 'Vote Proposal - relayerThreshold = 2, Finalized',
@@ -84,7 +90,8 @@ contract('Gas Benchmark - [Vote Proposal]', async (accounts) => {
             erc20TokenAmount,
             lenRecipientAddress,
             recipientAddress);
-        const voteTx = await vote(erc20ResourceID, newDepositNonce, depositData, relayer2Address);
+        const depositDataHash = Ethers.utils.keccak256(ERC20HandlerInstance.address + depositData.substr(2));
+        const voteTx = await vote(erc20ResourceID, newDepositNonce, depositDataHash, relayer2Address);
 
         gasBenchmarks.push({
             type: 'Vote Proposal - relayerThreshold = 1, Finalized',

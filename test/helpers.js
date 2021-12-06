@@ -28,25 +28,6 @@
         recipientAddress.substr(2);               // recipientAddress               (?? bytes)
 };
 
-const createERCWithdrawData = (tokenAddress, recipientAddress, tokenAmountOrID) => {
-    return '0x' +
-        toHex(tokenAddress, 32).substr(2) +
-        toHex(recipientAddress, 32).substr(2) +
-        toHex(tokenAmountOrID, 32).substr(2);
-}
-
-const createERC1155DepositData = (tokenIDs, amounts) => {
-    return abiEncode(["uint[]", "uint[]"], [tokenIDs, amounts]);
-}
-
-const createERC1155DepositProposalData = (tokenIDs, amounts, recipient, transferData) => {
-    return abiEncode(["uint[]", "uint[]", "bytes", "bytes"], [tokenIDs, amounts, recipient, transferData])
-}
-
-const createERC1155WithdrawData = (tokenAddress, recipient, tokenIDs, amounts, transferData) => {
-    return abiEncode(["address", "address", "uint[]", "uint[]", "bytes"], [tokenAddress, recipient, tokenIDs, amounts, transferData])
-}
-
 const createERC721DepositProposalData = (
     tokenAmountOrID, lenRecipientAddress,
     recipientAddress, lenMetaData, metaData) => {
@@ -75,8 +56,8 @@ const createGenericDepositData = (hexMetaData) => {
         hexMetaData.substr(2)
 };
 
-const createResourceID = (contractAddress, domainID) => {
-    return toHex(contractAddress + toHex(domainID, 0).substr(2), 32)
+const createResourceID = (contractAddress, chainID) => {
+    return toHex(contractAddress + toHex(chainID, 0).substr(2), 32)
 };
 
 const assertObjectsMatch = (expectedObj, actualObj) => {
@@ -111,7 +92,7 @@ const assertObjectsMatch = (expectedObj, actualObj) => {
         assert.deepEqual(expectedValue, actualValue, `expectedValue: ${expectedValue} does not match actualValue: ${actualValue}`);    
     }
 };
-//uint72 nonceAndID = (uint72(depositNonce) << 8) | uint72(domainID);
+//uint72 nonceAndID = (uint72(depositNonce) << 8) | uint72(chainID);
 const nonceAndId = (nonce, id) => {
     return Ethers.utils.hexZeroPad(Ethers.utils.hexlify(nonce), 8) + Ethers.utils.hexZeroPad(Ethers.utils.hexlify(id), 1).substr(2)
 }
@@ -124,10 +105,6 @@ module.exports = {
     abiEncode,
     getFunctionSignature,
     createERCDepositData,
-    createERCWithdrawData,
-    createERC1155DepositData,
-    createERC1155DepositProposalData,
-    createERC1155WithdrawData,
     createGenericDepositData,
     createERC721DepositProposalData,
     createResourceID,
