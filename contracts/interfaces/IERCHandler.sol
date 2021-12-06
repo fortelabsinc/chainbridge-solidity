@@ -17,13 +17,6 @@ interface IERCHandler {
         @param contractAddress Address of contract to be used when making or executing deposits.
      */
     function setBurnable(address contractAddress) external;
-
-    /**
-        @notice Marks {contractAddress} as lockable/mintable/unlockable.
-        @param contractAddress Address of contract to be used when making or executing deposits.
-     */
-    function setLockMintUnlockable(address contractAddress) external;
-
     /**
         @notice Withdraw funds from ERC safes.
         @param data ABI-encoded withdrawal params relevant to the handler.
