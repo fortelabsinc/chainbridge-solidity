@@ -77,13 +77,6 @@ contract HandlerHelpers is IERCHandler {
         _setLockMintUnlockable(contractAddress);
     }
 
-
-    /**
-        @notice Used to manually release funds from ERC safes.
-        @param tokenAddress Address of token contract to release.
-        @param recipient Address to release tokens to.
-        @param amountOrTokenID Either the amount of ERC20 tokens or the ERC721 token ID to release.
-     */
     function withdraw(bytes memory data) external virtual override {}
 
     function _setResource(bytes32 resourceID, address contractAddress) internal {
