@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 ChainSafe Systems
+ * Copyright 2021 ChainSafe Systems
  * SPDX-License-Identifier: LGPL-3.0-only
  */
 
@@ -8,58 +8,55 @@ const TruffleAssert = require('truffle-assertions');
 const Helpers = require('../helpers');
 
 const BridgeContract = artifacts.require("Bridge");
-const ERC20MintableContract = artifacts.require("ERC20PresetMinterPauser");
-const ERC20HandlerContract = artifacts.require("ERC20Handler");
+const ERC1155MintableContract = artifacts.require("ERC1155PresetMinterPauser");
+const ERC1155HandlerContract = artifacts.require("ERC1155Handler");
 
-contract('Bridge - [deposit - ERC20]', async (accounts) => {
+contract('Bridge - [deposit - ERC1155]', async (accounts) => {
     const originDomainID = 1;
     const destinationDomainID = 2;
     const relayerThreshold = 0;
     const depositerAddress = accounts[1];
-    const recipientAddress = accounts[2];
+    const originChainTokenID = 42;
     const originChainInitialTokenAmount = 100;
     const depositAmount = 10;
     const expectedDepositNonce = 1;
     
     let BridgeInstance;
-    let OriginERC20MintableInstance;
-    let OriginERC20HandlerInstance;
+    let OriginERC1155MintableInstance;
+    let OriginERC1155HandlerInstance;
     let depositData;
 
     beforeEach(async () => {
         await Promise.all([
-            ERC20MintableContract.new("token", "TOK").then(instance => OriginERC20MintableInstance = instance),
+            ERC1155MintableContract.new("TOK").then(instance => OriginERC1155MintableInstance = instance),
             BridgeInstance = await BridgeContract.new(originDomainID, [], relayerThreshold, 0, 100)
         ]);
         
         
-        resourceID = Helpers.createResourceID(OriginERC20MintableInstance.address, originDomainID);
+        resourceID = Helpers.createResourceID(OriginERC1155MintableInstance.address, originDomainID);
 
-        OriginERC20HandlerInstance = await ERC20HandlerContract.new(BridgeInstance.address);
+        OriginERC1155HandlerInstance = await ERC1155HandlerContract.new(BridgeInstance.address);
 
         await Promise.all([
-            BridgeInstance.adminSetResource(OriginERC20HandlerInstance.address, resourceID, OriginERC20MintableInstance.address),
-            OriginERC20MintableInstance.mint(depositerAddress, originChainInitialTokenAmount)
+            BridgeInstance.adminSetResource(OriginERC1155HandlerInstance.address, resourceID, OriginERC1155MintableInstance.address),
+            OriginERC1155MintableInstance.mintBatch(depositerAddress, [originChainTokenID], [originChainInitialTokenAmount], "0x0")
         ]);
-        await OriginERC20MintableInstance.approve(OriginERC20HandlerInstance.address, depositAmount * 2, { from: depositerAddress });
+        await OriginERC1155MintableInstance.setApprovalForAll(OriginERC1155HandlerInstance.address, true, { from: depositerAddress });
 
-        depositData = Helpers.createERCDepositData(
-            depositAmount,
-            20,
-            recipientAddress);
+        depositData = Helpers.createERC1155DepositData([originChainTokenID], [depositAmount]);
     });
 
     it("[sanity] test depositerAddress' balance", async () => {
-        const originChainDepositerBalance = await OriginERC20MintableInstance.balanceOf(depositerAddress);
+        const originChainDepositerBalance = await OriginERC1155MintableInstance.balanceOf(depositerAddress, originChainTokenID);
         assert.strictEqual(originChainDepositerBalance.toNumber(), originChainInitialTokenAmount);
     });
 
-    it("[sanity] test OriginERC20HandlerInstance.address' allowance", async () => {
-        const originChainHandlerAllowance = await OriginERC20MintableInstance.allowance(depositerAddress, OriginERC20HandlerInstance.address);
-        assert.strictEqual(originChainHandlerAllowance.toNumber(), depositAmount * 2);
+    it("[sanity] test OriginERC1155HandlerInstance.address' allowance", async () => {
+        const originChainHandlerApprovedStatus = await OriginERC1155MintableInstance.isApprovedForAll(depositerAddress, OriginERC1155HandlerInstance.address);
+        assert.strictEqual(originChainHandlerApprovedStatus, true);
     });
 
-    it('ERC20 deposit can be made', async () => {
+    it('ERC1155 deposit can be made', async () => {
         await TruffleAssert.passes(BridgeInstance.deposit(
             destinationDomainID,
             resourceID,
@@ -80,7 +77,7 @@ contract('Bridge - [deposit - ERC20]', async (accounts) => {
         assert.strictEqual(depositCount.toNumber(), expectedDepositNonce);
     });
 
-    it('ERC20 can be deposited with correct balances', async () => {
+    it('ERC1155 can be deposited with correct balances', async () => {
         await BridgeInstance.deposit(
             destinationDomainID,
             resourceID,
@@ -88,10 +85,10 @@ contract('Bridge - [deposit - ERC20]', async (accounts) => {
             { from: depositerAddress }
         );
 
-        const originChainDepositerBalance = await OriginERC20MintableInstance.balanceOf(depositerAddress);
+        const originChainDepositerBalance = await OriginERC1155MintableInstance.balanceOf(depositerAddress, originChainTokenID);
         assert.strictEqual(originChainDepositerBalance.toNumber(), originChainInitialTokenAmount - depositAmount);
 
-        const originChainHandlerBalance = await OriginERC20MintableInstance.balanceOf(OriginERC20HandlerInstance.address);
+        const originChainHandlerBalance = await OriginERC1155MintableInstance.balanceOf(OriginERC1155HandlerInstance.address, originChainTokenID);
         assert.strictEqual(originChainHandlerBalance.toNumber(), depositAmount);
     });
 

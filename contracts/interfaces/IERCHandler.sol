@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.6.12;
 
 /**
@@ -24,10 +25,8 @@ interface IERCHandler {
     function setLockMintUnlockable(address contractAddress) external;
 
     /**
-        @notice Used to manually release funds from ERC safes.
-        @param tokenAddress Address of token contract to release.
-        @param recipient Address to release tokens to.
-        @param amountOrTokenID Either the amount of ERC20 tokens or the ERC721 token ID to release.
+        @notice Withdraw funds from ERC safes.
+        @param data ABI-encoded withdrawal params relevant to the handler.
      */
-    function withdraw(address tokenAddress, address recipient, uint256 amountOrTokenID) external;
+    function withdraw(bytes memory data) external;
 }

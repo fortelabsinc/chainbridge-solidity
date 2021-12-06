@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -19,30 +20,8 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
 
     bytes4 private constant _INTERFACE_ERC721_METADATA = 0x5b5e139f;
 
-    struct DepositRecord {
-        address _tokenAddress;
-        uint8   _destinationChainID;
-        bytes32 _resourceID;
-        bytes   _destinationRecipientAddress;
-        address _depositer;
-        uint    _tokenID;
-        bytes   _metaData;
-    }
-
-    // destId => depositNonce => Deposit Record
-    mapping (uint8 => mapping (uint64 => DepositRecord)) public _depositRecords;
-
     /**
         @param bridgeAddress Contract address of previously deployed Bridge.
-        @param initialResourceIDs Resource IDs are used to identify a specific contract address.
-        These are the Resource IDs this contract will initially support.
-        @param initialContractAddresses These are the addresses the {initialResourceIDs} will point to, and are the contracts that will be
-        called to perform various deposit calls.
-        @param burnableContractAddresses These addresses will be set as burnable and when {deposit} is called, the deposited token will be burned.
-        When {executeProposal} is called, new tokens will be minted.
-
-        @dev {initialResourceIDs} and {initialContractAddresses} must have the same length (one resourceID for every address).
-        Also, these arrays must be ordered in the way that {initialResourceIDs}[0] is the intended resourceID for {initialContractAddresses}[0].
      */
     constructor(
         address bridgeAddress,
@@ -87,33 +66,24 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
 
     /**
         @notice A deposit is initiatied by making a deposit in the Bridge contract.
-        @param destinationChainID Chain ID of chain token is expected to be bridged to.
-        @param depositNonce This value is generated as an ID by the Bridge contract.
+        @param resourceID ResourceID used to find address of token to be used for deposit.
         @param depositer Address of account making the deposit in the Bridge contract.
-        @param data Consists of: {resourceID}, {tokenID}, {lenDestinationRecipientAddress},
-        and {destinationRecipientAddress} all padded to 32 bytes.
+        @param data Consists of {tokenID} padded to 32 bytes.
         @notice Data passed into the function should be constructed as follows:
         tokenID                                     uint256    bytes    0  - 32
-        destinationRecipientAddress     length      uint256    bytes    32 - 64
-        destinationRecipientAddress                   bytes    bytes    64 - (64 + len(destinationRecipientAddress))
         @notice If the corresponding {tokenAddress} for the parsed {resourceID} supports {_INTERFACE_ERC721_METADATA},
         then {metaData} will be set according to the {tokenURI} method in the token contract.
         @dev Depending if the corresponding {tokenAddress} for the parsed {resourceID} is
         marked true in {_burnList}, deposited tokens will be burned, if not, they will be locked.
+        @return metaData : the deposited token metadata acquired by calling a {tokenURI} method in the token contract.
      */
     function deposit(bytes32    resourceID,
-                    uint8       destinationChainID,
-                    uint64      depositNonce,
                     address     depositer,
                     bytes       calldata data
-                    ) external override onlyBridge {
+                    ) external override onlyBridge returns (bytes memory metaData) {
         uint         tokenID;
-        uint         lenDestinationRecipientAddress;
-        bytes memory destinationRecipientAddress;
-        bytes memory metaData;
 
-        (tokenID, lenDestinationRecipientAddress) = abi.decode(data, (uint, uint));
-        destinationRecipientAddress = bytes(data[64:64 + lenDestinationRecipientAddress]);
+        (tokenID) = abi.decode(data, (uint));
 
         address tokenAddress = _resourceIDToTokenContractAddress[resourceID];
         require(_contractWhitelist[tokenAddress], "provided tokenAddress is not whitelisted");
@@ -129,16 +99,6 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
         } else {
             lockERC721(tokenAddress, depositer, address(this), tokenID);
         }
-
-        _depositRecords[destinationChainID][depositNonce] = DepositRecord(
-            tokenAddress,
-            uint8(destinationChainID),
-            resourceID,
-            destinationRecipientAddress,
-            depositer,
-            tokenID,
-            metaData
-        );
     }
 
     /**
@@ -193,11 +153,19 @@ contract ERC721Handler is IDepositExecute, HandlerHelpers, ERC721Safe {
 
     /**
         @notice Used to manually release ERC721 tokens from ERC721Safe.
-        @param tokenAddress Address of token contract to release.
-        @param recipient Address to release token to.
-        @param tokenID The ERC721 token ID to release.
+        @param data Consists of {tokenAddress}, {recipient}, and {tokenID} all padded to 32 bytes.
+        @notice Data passed into the function should be constructed as follows:
+        tokenAddress                           address     bytes  0 - 32
+        recipient                              address     bytes  32 - 64
+        tokenID                                uint        bytes  64 - 96
      */
-    function withdraw(address tokenAddress, address recipient, uint tokenID) external override onlyBridge {
+    function withdraw(bytes memory data) external override onlyBridge {
+        address tokenAddress;
+        address recipient;
+        uint tokenID;
+
+        (tokenAddress, recipient, tokenID) = abi.decode(data, (address, address, uint));
+
         releaseERC721(tokenAddress, address(this), recipient, tokenID);
     }
 }
