@@ -52,13 +52,13 @@ contract Bridge is Pausable, AccessControl, SafeMath {
         uint8 indexed originChainID,
         uint64 indexed depositNonce,
         ProposalStatus indexed status,
-        bytes32 indexed dataHash
+        bytes32 dataHash
     );
     event ProposalVote(
         uint8 indexed originChainID,
         uint64 indexed depositNonce,
         ProposalStatus indexed status,
-        bytes32 indexed dataHash
+        bytes32 dataHash
     );
 
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
