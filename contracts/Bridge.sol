@@ -44,21 +44,21 @@ contract Bridge is Pausable, AccessControl, SafeMath {
     event RelayerAdded(address relayer);
     event RelayerRemoved(address relayer);
     event Deposit(
-        uint8   destinationChainID,
-        bytes32 resourceID,
-        uint64  depositNonce
+        uint8 indexed destinationChainID,
+        bytes32 indexed resourceID,
+        uint64 indexed  depositNonce
     );
     event ProposalEvent(
-        uint8          originChainID,
-        uint64         depositNonce,
-        ProposalStatus status,
-        bytes32 dataHash
+        uint8 indexed originChainID,
+        uint64 indexed depositNonce,
+        ProposalStatus indexed status,
+        bytes32 indexed dataHash
     );
     event ProposalVote(
-        uint8   originChainID,
-        uint64  depositNonce,
-        ProposalStatus status,
-        bytes32 dataHash
+        uint8 indexed originChainID,
+        uint64 indexed depositNonce,
+        ProposalStatus indexed status,
+        bytes32 indexed dataHash
     );
 
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
